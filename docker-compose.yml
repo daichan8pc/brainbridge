@@ -1,0 +1,18 @@
+services:
+  brainbridge-dev:
+    build: .
+    container_name: brainbridge-dev
+    volumes:
+      - ./app:/app  # 手元のコードをコンテナと同期
+    ports:
+      - "8501:8501" # ブラウザから localhost:8501 でアクセス
+    # --- 今後のため、GPUを使う準備（なくても動きます） ---
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    stdin_open: true
+    tty: true
