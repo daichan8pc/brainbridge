@@ -23,7 +23,6 @@ y_raw = df['label']
 y_encoded = encoder.fit_transform(y_raw)
 
 # --- 2. データ水増し (Data Augmentation) ---
-# DCON技術点アップの鍵！ノイズを加えてデータを5倍に増やす
 def augment_data(X, y, noise_level=0.1, count=5):
     X_aug, y_aug = [X], [y]
     for _ in range(count):
@@ -62,14 +61,15 @@ for epoch in range(epochs):
         print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
 
 # --- 4. モデルと設定の保存 ---
-# 重要：モデルだけでなく、ScalerとEncoderも保存する
 save_data = {
     'model_state': model.state_dict(),
     'scaler': scaler,
     'encoder': encoder,
-    'input_size': X_tensor.shape[1]
+    'input_size': X_tensor.shape[1],
+    'X_test': X_test,  # ← 追加：評価用データ(2割)
+    'y_test': y_test   # ← 追加：その正解ラベル(答え合わせ用)
 }
-with open('brain_model_dl.pkl', 'wb') as f:
-    pickle.dump(save_data, f)
 
-print("学習完了！ 'brain_model_dl.pkl' を保存しました。")
+import torch
+torch.save(save_data, "brain_model_dl.pkl")
+print("学習完了！ テストデータ付きで 'brain_model_dl.pkl' を保存しました。")
