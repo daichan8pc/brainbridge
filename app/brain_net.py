@@ -1,27 +1,30 @@
 import torch
 import torch.nn as nn
 
-# DCON審査員へのアピールポイント：
-# 「エッジデバイス(Jetson)での動作を考慮し、軽量かつ高精度な3層ニューラルネットワークを設計しました」
-
 class BrainNet(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size=2548, num_classes=3):
         super(BrainNet, self).__init__()
+        # 3層のニューラルネットワーク
+        self.fc1 = nn.Linear(input_size, 1024)
+        self.fc2 = nn.Linear(1024, 512)
+        self.fc3 = nn.Linear(512, 128)
+        self.fc4 = nn.Linear(128, num_classes)
         
-        # ネットワークの構造定義
-        # 入力層(input_size) -> 隠れ層1(128個のニューロン) -> 隠れ層2(64個) -> 出力層(3つの感情)
-        self.fc1 = nn.Linear(input_size, 128)
-        self.relu = nn.ReLU()             # 活性化関数（信号の発火を模倣）
-        self.dropout = nn.Dropout(0.3)    # 過学習防止用（30%のニューロンをランダムにサボらせる）
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, 3)       # 出力は3つ (Positive, Negative, Neutral)
-
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.4) # 過学習防止
+        
     def forward(self, x):
-        # データの流れ（順伝播）
         out = self.fc1(x)
         out = self.relu(out)
-        out = self.dropout(out) # ここで過学習を防ぐ
+        out = self.dropout(out)
+        
         out = self.fc2(out)
         out = self.relu(out)
+        out = self.dropout(out)
+        
         out = self.fc3(out)
+        out = self.relu(out)
+        out = self.dropout(out)
+        
+        out = self.fc4(out)
         return out

@@ -3,12 +3,12 @@ import time
 import pandas as pd
 import torch
 import numpy as np
-from brain_net import BrainNet  # あなたのモデル定義ファイル
+from brain_net import BrainNet
 
 # --- 1. 画面設定（3.5インチ対応） ---
 st.set_page_config(page_title="BrainBridge", layout="wide")
 
-# CSSでデザインを強制改造（ボタンと文字を巨大化）
+# CSSでデザインを強制改造
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: white; }
@@ -34,10 +34,7 @@ st.markdown("""
         border-radius: 10px;
         border: none;
     }
-    /* 押した後のボタンの色 */
-    .stButton > button:active {
-        background-color: #45a049;
-    }
+    .stButton > button:active { background-color: #45a049; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -45,14 +42,14 @@ st.markdown("""
 @st.cache_resource
 def load_model_resources():
     try:
+        # weights_only=False でセキュリティエラーを回避
         checkpoint = torch.load("brain_model_dl.pkl", map_location=torch.device('cpu'), weights_only=False)
         
         model = BrainNet(input_size=checkpoint['input_size'])
         model.load_state_dict(checkpoint['model_state'])
         model.eval()
         
-        # テストデータも返すように変更
-        # .get() を使うと、もしキーがなくてもエラーにならず None を返すので安全
+        # テストデータが存在するか確認して取得
         X_test = checkpoint.get('X_test')
         y_test = checkpoint.get('y_test')
         
@@ -61,54 +58,44 @@ def load_model_resources():
         st.error(f"モデル読み込みエラー: {e}")
         return None, None, None, None, None
 
-# 戻り値が増えたので受け取り変数も増やす
 model, scaler, encoder, X_test, y_test = load_model_resources()
 
-# --- 3. 脳波データ取得関数（ダミー） ---
-# ★重要★ 本番ではここに NeuroSky の取得コードを入れます
+# --- 3. データ取得シミュレーター ---
 def get_realtime_eeg():
-    # もしテストデータがあれば、そこからランダムに1つ選ぶ
+    """保存されたテストデータからランダムに1行抽出して、リアルな脳波を再現する"""
     if X_test is not None:
-        # 0番目〜データの最後までのインデックスをランダムに1つ決める
-        random_idx = np.random.randint(0, len(X_test))
+        # ランダムなインデックスを決定
+        idx = np.random.randint(0, len(X_test))
         
-        # その行のデータを取り出す (1行分の特徴量)
-        # ※ X_test はすでに DataFrame か Numpy配列 なので、スライスで取得
+        # データ取り出し (DataFrameかNumpyかで分岐)
         if hasattr(X_test, 'iloc'):
-            # DataFrameの場合
-            selected_data = X_test.iloc[random_idx].values.reshape(1, -1)
+            raw_data = X_test.iloc[idx].values.reshape(1, -1)
+            true_label_idx = y_test[idx] if isinstance(y_test, np.ndarray) else y_test.iloc[idx]
         else:
-            # Numpyの場合
-            selected_data = X_test[random_idx].reshape(1, -1)
+            raw_data = X_test[idx].reshape(1, -1)
+            true_label_idx = y_test[idx]
             
-        # ★デモ用★ 本当の正解ラベルもこっそり返す（コンソール確認用など）
-        true_label = y_test.iloc[random_idx] if hasattr(y_test, 'iloc') else y_test[random_idx]
-        
-        return selected_data, true_label
-        
+        # 参考情報として正解ラベルの文字も返す
+        true_label_str = encoder.inverse_transform([true_label_idx])[0]
+        return raw_data, true_label_str
     else:
-        # データがない場合（古いpklなど）は仕方なく乱数
+        # データがない場合は乱数 (緊急避難用)
         return np.random.rand(1, 2548), "Unknown"
 
-    
-# --- 4. メインアプリのロジック ---
-
+# --- 4. メインアプリ ---
 st.markdown("<h3 style='text-align: center;'>BrainBridge AI</h3>", unsafe_allow_html=True)
 
-# セッション状態（画面の記憶）を初期化
+# セッション状態初期化
 if 'result_emotion' not in st.session_state:
     st.session_state['result_emotion'] = None
 
-# --- UI分岐 ---
-
-# A. 結果が出ている場合：結果表示画面
+# A. 結果表示画面
 if st.session_state['result_emotion']:
     emotion = st.session_state['result_emotion']
     
     # 色の決定
-    color = "#ffffff"
-    if "Positive" in emotion: bg_color = "#28a745"  # 緑
-    elif "Negative" in emotion: bg_color = "#dc3545" # 赤
+    if "POSITIVE" in emotion.upper(): bg_color = "#28a745" # 緑
+    elif "NEGATIVE" in emotion.upper(): bg_color = "#dc3545" # 赤
     else: bg_color = "#6c757d" # グレー
     
     st.markdown(f"""
@@ -117,53 +104,43 @@ if st.session_state['result_emotion']:
         </div>
     """, unsafe_allow_html=True)
     
-    st.write("") # 余白
     st.write("") 
-    
-    # リセットボタン
     if st.button("もう一度計測 (RETRY)"):
         st.session_state['result_emotion'] = None
         st.rerun()
 
-# B. 待機画面：計測スタート
+# B. 待機画面
 else:
     st.info("装着を確認してボタンを押してください")
     
     if st.button("診断開始 (START)"):
-        # --- 計測ループ (5秒間) ---
         progress_bar = st.progress(0)
         status_text = st.empty()
+        predictions = [] 
         
-        predictions = [] # 結果を溜めるリスト
-        
-        # 5秒間で約20回計測するループ
+        # 5秒間の計測シミュレーション (約20回)
         for i in range(20):
-            status_text.text(f"脳波解析中... {int((i/20)*100)}%")
+            status_text.text(f"解析中... {int((i/20)*100)}%")
             
-            # 1. データと、その正解ラベルを取得
-            raw_data, true_label = get_realtime_eeg()
+            # 1. リアルなテストデータを取得
+            raw_data, true_debug = get_realtime_eeg()
             
-            # 2. Scalerで正規化
+            # 2. 前処理 (Scaler)
             input_scaled = scaler.transform(raw_data)
             input_tensor = torch.FloatTensor(input_scaled)
-
+            
             # 3. AI推論
             with torch.no_grad():
                 output = model(input_tensor)
                 _, predicted = torch.max(output, 1)
                 
-            # 4. 結果をリストに追加（デコードして文字にする）
             pred_label = encoder.inverse_transform(predicted.numpy())[0]
             predictions.append(pred_label)
             
-            # プログレスバー更新
             progress_bar.progress((i + 1) / 20)
-            time.sleep(0.25) # ウェイト
+            time.sleep(0.1) # 演出用ウェイト
             
-        # --- 最終判定（多数決） ---
-        # リストの中で一番多かった感情を選ぶ
+        # 最終判定 (多数決)
         final_decision = max(set(predictions), key=predictions.count)
-        
-        # 結果を保存して再描画
         st.session_state['result_emotion'] = final_decision
         st.rerun()

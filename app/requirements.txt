@@ -1,8 +1,7 @@
-streamlit
-numpy
-pandas
-matplotlib
-scikit-learn
-# ここが魔法の呪文（CPU版を指定して軽量化）
---extra-index-url https://download.pytorch.org/whl/cpu
 torch
+torchvision
+torchaudio
+pandas
+numpy
+scikit-learn
+streamlit
