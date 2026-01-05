@@ -8,13 +8,13 @@ BrainBridge は、脳波データをディープラーニング（PyTorch）で�
 ## 特徴
 
 - **リアルタイム解析:** 脳波データから瞬時に感情を推論。
-- **コンパクトな独立動作:** Raspberry Pi 3B + 3.5 インチ画面だけで完結（スタンドアロン）。
+- **コンパクトな独立動作:** Raspberry Pi 4B + 3.5 インチ画面だけで完結（スタンドアロン）。
 - **高精度 AI モデル:** PyTorch を用いた 3 層ニューラルネットワークを採用。
 - **シミュレーションモード:** 実際の脳波計がない環境でも、テストデータを用いてデモ動作が可能。
 
 ## ハードウェア要件
 
-- **本体:** Raspberry Pi 3 Model B (または 4B)
+- **本体:** Raspberry Pi 4 Model B
 - **ディスプレイ:** OSOYOO 3.5 インチ HDMI タッチスクリーン
 - **その他:** microSD カード (16GB 以上推奨), 電源
 
@@ -23,7 +23,7 @@ BrainBridge は、脳波データをディープラーニング（PyTorch）で�
 本システムは、ドライバおよびライブラリの互換性のため、以下の環境を強く推奨します。
 
 - **OS:** Raspberry Pi OS Legacy (Bullseye, 32-bit)
-  - ※最新の Bookworm では画面ドライバや PyTorch が動作しない可能性があります。
+  - ※最新の Bookworm や Trixie では画面ドライバや PyTorch が動作しない可能性があります。
 - **Python:** 3.9 (OS 標準)
 
 ## インストール手順
@@ -32,7 +32,7 @@ BrainBridge は、脳波データをディープラーニング（PyTorch）で�
 
 ```bash
 cd ~/projects
-git clone [https://github.com/ユーザー名/BrainBridge.git](https://github.com/ユーザー名/BrainBridge.git)
+git clone https://github.com/daichan8pc/BrainBridge.git
 cd BrainBridge/app
 
 ```
@@ -63,11 +63,11 @@ source venv/bin/activate
 
 ### 4. PyTorch のインストール (Armv7/32-bit 用)
 
-Raspberry Pi 3 (32-bit) に対応した特定のバージョンをインストールします。
+Raspberry Pi 4 (32-bit) に対応した特定のバージョンをインストールします。
 
 ```bash
 pip install --upgrade pip setuptools wheel
-pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url [https://download.pytorch.org/whl/cpu](https://download.pytorch.org/whl/cpu)
+pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cpu
 
 ```
 
@@ -82,7 +82,7 @@ pip install -r requirements.txt
 
 ```bash
 # ドライバのダウンロードと適用
-git clone [https://github.com/osoyoo/HDMI-show.git](https://github.com/osoyoo/HDMI-show.git)
+git clone https://github.com/osoyoo/HDMI-show.git
 chmod -R 755 HDMI-show
 cd HDMI-show/
 sudo ./hdmi480320
@@ -104,6 +104,31 @@ streamlit run main.py
 ### キオスクモード（全画面自動起動）
 
 展示などで使用する場合は、`start_brainbridge.sh` を自動起動設定に追加してください。
+
+## 安全な終了方法
+
+Raspberry Pi は、いきなり電源ケーブルを抜くと **microSD カードが破損し、二度と起動しなくなる（データが飛ぶ）** 恐れがあります。
+必ず以下のいずれかの方法でシステムを安全にシャットダウンしてください。
+
+### 1. 外部 PC から終了する場合（推奨）
+
+キオスクモード（全画面）で動作中など、画面操作ができない場合は、PC から SSH 接続して終了コマンドを送ります。
+
+```bash
+# SSH接続
+ssh pi@raspi3b.local  # (ホスト名は設定に合わせてください)
+
+# シャットダウンコマンド実行
+sudo shutdown -h now
+
+```
+
+### 2. キーボード/マウスがある場合
+
+- **手動起動時:** ターミナルで `Ctrl + C` を押してアプリを停止し、`sudo shutdown -h now` を実行します。
+- **デスクトップ画面:** 左上のメニュー（ラズベリーアイコン）から「Shutdown」を選択します。
+
+> **Note:** 緑色のアクセスランプ（ACT LED）が完全に点滅しなくなるまで待ってから、電源ケーブルを抜いてください。
 
 ## ファイル構成
 
