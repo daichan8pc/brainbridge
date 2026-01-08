@@ -22,7 +22,7 @@ BrainBridge は、脳波データをディープラーニング（PyTorch）で�
 
 本システムは、ドライバおよびライブラリの互換性のため、以下の環境を強く推奨します。
 
-- **OS:** Raspberry Pi OS Legacy (Bullseye, 32-bit)
+- **OS:** Raspberry Pi OS Legacy (Bullseye, 64-bit)
   - ※最新の Bookworm や Trixie では画面ドライバや PyTorch が動作しない可能性があります。
 - **Python:** 3.9 (OS 標準)
 
