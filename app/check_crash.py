@@ -1,3 +1,7 @@
+# Copyright (c) 2026 BrainBridge Project Team
+# Released under the MIT License
+# https://opensource.org/licenses/MIT
+
 print("1. Start")
 import numpy
 print(f"2. NumPy Imported: {numpy.__version__}")

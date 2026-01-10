@@ -1,3 +1,7 @@
+# Copyright (c) 2026 BrainBridge Project Team
+# Released under the MIT License
+# https://opensource.org/licenses/MIT
+
 import torch
 import torch.nn as nn
 
