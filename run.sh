@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ログファイルに出力（デバッグ用）
-exec > >(tee -a /home/pi/brainbridge/app.log) 2>&1
+exec > >(tee -a ~/brainbridge/app.log) 2>&1
 echo "--- Starting BrainBridge System: $(date) ---"
 
 # 1. 環境設定
@@ -11,7 +11,7 @@ export MKL_NUM_THREADS=1
 export DISPLAY=:0
 
 # 2. ディレクトリ移動（★ここが最重要！モデルファイル読み込みに必須）
-cd /home/pi/brainbridge/app
+cd ~/brainbridge/app
 
 # 3. 仮想環境に入る
 source venv/bin/activate
