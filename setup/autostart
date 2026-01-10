@@ -2,19 +2,14 @@
 @pcmanfm --desktop --profile LXDE-pi
 @xscreensaver -no-splash
 
-# Screen power management (画面を消さない)
+# 画面を消さない設定
 @xset s off
 @xset -dpms
 @xset s noblank
 
-# Hide mouse cursor (optional: uncomment if needed)
-# @unclutter -idle 0.1 -root
+# マウスカーソルを非表示にする
+@unclutter -idle 0.1 -root
 
-# Start Streamlit App
-# 修正1: フォルダ名を小文字の "brainbridge" に統一
-# 修正2: コマンドが途切れていたのを1行に修正
-@bash -c "export OPENBLAS_CORETYPE=ARMV8 && source /home/pi/brainbridge/app/venv/bin/activate && cd /home/pi/brainbridge/app && streamlit run main.py --server.port 8501 --server.headless true > /home/pi/app.log 2>&1"
-
-# Start Chromium in Kiosk Mode
-# サーバー起動待ち(20秒)の後にブラウザを起動
-@bash -c "sleep 20 && chromium-browser --kiosk --incognito http://localhost:8501"
+# BrainBridge起動スクリプトを実行
+# ターミナルを出さずに裏で実行させる
+@bash /home/pi/brainbridge/run.sh
