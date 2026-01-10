@@ -1,19 +1,23 @@
 # BrainBridge - EEG Emotion Recognition System
 
 **BrainBridge** は、脳波（EEG）を解析し、リアルタイムで感情（Positive / Negative / Neutral）を推定・可視化するシステムです。
-Raspberry Pi 4 上で動作し、ディープラーニングモデル（PyTorch）とタッチパネルUI（Streamlit）を組み合わせたスタンドアローンデバイスとして設計されています。
+
+Raspberry Pi 4 上で動作し、ディープラーニングモデル（PyTorch）とタッチパネル UI（Streamlit）を組み合わせたスタンドアローンデバイスとして設計されています。
 
 **Team:** BrainBridge Project Team (Numazu KOSEN & Nara KOSEN)
+
 **Event:** DCON2026 (Deep Learning Contest 2026) Project
 
 ## System Architecture
 
 ### Hardware
+
 - **Device:** Raspberry Pi 4 Model B (4GB/8GB RAM recommended)
 - **Display:** 3.5 inch Touch LCD (or HDMI Display)
 - **Sensor:** EEG Headset (connection via LSL/Serial)
 
 ### Software Stack
+
 - **OS:** Raspberry Pi OS Legacy (Bullseye) 64-bit
 - **Language:** Python 3.9+
 - **GUI Framework:** Streamlit (Kiosk Mode)
@@ -22,33 +26,40 @@ Raspberry Pi 4 上で動作し、ディープラーニングモデル（PyTorch�
 
 ## Installation Guide
 
-本システムは、Raspberry Pi の ARMアーキテクチャに最適化するため、**OS標準ライブラリとPython仮想環境を併用する「ハイブリッド構成」**を採用しています。
+本システムは、Raspberry Pi の ARM アーキテクチャに最適化するため、**OS 標準ライブラリと Python 仮想環境を併用する「ハイブリッド構成」**を採用しています。
+
 再現性を確保するため、以下の手順に従って環境を構築してください。
 
 ### 0. OS Preparation (Crucial)
+
 本システムは **Raspberry Pi OS (Bullseye)** での動作を前提としています。
-新しいOS（Bookworm等）ではPythonの仮想環境ポリシーが異なるため、以下の特定バージョンのOSイメージを使用することを強く推奨します。
 
-1. **OSイメージのダウンロード**
+新しい OS（Bookworm 等）では Python の仮想環境ポリシーが異なるため、以下の特定バージョンの OS イメージを使用することを強く推奨します。
+
+1. **OS イメージのダウンロード**
    以下のリンクまたはアーカイブから、`2024-07-04-raspios-bullseye-arm64.img` をダウンロードしてください。
-   * **Version:** Raspberry Pi OS Legacy (64-bit) Bullseye
-   * **Release Date:** 2024-07-04
 
-2. **SDカードへの書き込みと初期設定**
-   Raspberry Pi Imager 等を使用して、ダウンロードした `.img` ファイルをSDカードに書き込んでください。
-   ※書き込み時にOS設定が適用できない場合、以下のいずれかの方法で初期設定（ユーザー作成、Wi-Fi、SSH）を行ってください。
+   - **Version:** Raspberry Pi OS Legacy (64-bit) Bullseye
+   - **Release Date:** 2024-07-04
 
-   * **方法A：周辺機器を接続して設定（確実）**
-     Raspberry Piにモニター、キーボード、マウスを接続して起動し、画面のウィザードに従ってユーザー名（`pi`推奨）やWi-Fiの設定を完了させてください。
+2. **SD カードへの書き込みと初期設定**
+   Raspberry Pi Imager 等を使用して、ダウンロードした `.img` ファイルを SD カードに書き込んでください。
 
-   * **方法B：SDカードに設定ファイルを配置（ヘッドレス）**
-     書き込み完了後、PC上でSDカードの `boot` パーティションを開き、直下に以下のファイルを作成することで自動設定が可能です。
-     * `ssh` （空ファイル）： SSHを有効化します。
-     * `userconf.txt` ： ユーザー自動作成用（形式: `username:encrypted_password`）。
-     * `wpa_supplicant.conf` ： Wi-Fi接続情報記述用。
+   ※書き込み時に OS 設定が適用できない場合、以下のいずれかの方法で初期設定（ユーザー作成、Wi-Fi、SSH）を行ってください。
+
+   - **方法 A：周辺機器を接続して設定（確実）**
+     Raspberry Pi にモニター、キーボード、マウスを接続して起動し、画面のウィザードに従ってユーザー名（`pi`推奨）や Wi-Fi の設定を完了させてください。
+
+   - **方法 B：SD カードに設定ファイルを配置（ヘッドレス）**
+     書き込み完了後、PC 上で SD カードの `boot` パーティションを開き、直下に以下のファイルを作成することで自動設定が可能です。
+     - `ssh` （空ファイル）： SSH を有効化します。
+     - `userconf.txt` ： ユーザー自動作成用（形式: `username:encrypted_password`）。
+     - `wpa_supplicant.conf` ： Wi-Fi 接続情報記述用。
 
 ### 1. Prerequisites (System Libraries)
+
 システムレベルで安定した数値計算ライブラリをインストールします。
+
 ※ `pip` で入れると `Illegal instruction` エラーが出るため、必ず `apt` を使用してください。
 
 ```bash
@@ -70,6 +81,7 @@ source venv/bin/activate
 ### 3. Install Dependencies
 
 Python ライブラリをインストールします。
+
 **注意:** `numpy` や `pandas` はインストールせず（システム版を使用）、`streamlit` と `torch` のみを入れます。
 
 ```bash
@@ -123,12 +135,15 @@ brainbridge/
 ## Troubleshooting
 
 **Q. "Illegal instruction" エラーが出る**
+
 A. `pip` でインストールされた `numpy` や `pandas` が ARMv6/v7 用の命令を含んでいる可能性があります。`tools/diagnose.py` を実行して環境を確認し、問題があればシステム版（apt）に入れ替えてください。
 
 **Q. グラフが表示されない / エラーになる**
+
 A. `PyArrow` がインストールされているとクラッシュする場合があります。本システムは `Matplotlib` を使用して描画を行ってください。
 
 ## License
 
 [MIT License](https://opensource.org/licenses/MIT)
+
 (c) 2026 BrainBridge Project Team
