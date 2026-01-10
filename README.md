@@ -84,9 +84,14 @@ export OPENBLAS_CORETYPE=ARMV8
 streamlit run main.py --server.address 0.0.0.0
 ```
 
-### 自動起動（キオスクモード）
+### 自動起動（キオスクモード）設定
+以下のスクリプトを実行することで、起動時にアプリが自動的に全画面表示されるようになります。
 
-`~/.config/lxsession/LXDE-pi/autostart` に起動スクリプトを記述することで、電源ON時の自動起動が可能です。詳細はドキュメントまたはセットアップ担当者へ確認してください。
+```bash
+chmod +x setup/install_kiosk.sh
+./setup/install_kiosk.sh
+sudo reboot
+```
 
 ## 7. 終了方法
 
