@@ -1,6 +1,8 @@
 # Copyright (c) 2026 BrainBridge Project Team
 # Released under the MIT License
 # https://opensource.org/licenses/MIT
+import os
+os.environ['OPENBLAS_CORETYPE'] = 'ARMV8'
 
 import streamlit as st
 import time
