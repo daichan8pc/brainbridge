@@ -1,3 +1,7 @@
+# Copyright (c) 2026 BrainBridge Project Team
+# Released under the MIT License
+# https://opensource.org/licenses/MIT
+
 #!/bin/bash
 
 # スクリプトのディレクトリに移動（どこから実行しても大丈夫なように）

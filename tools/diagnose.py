@@ -1,5 +1,6 @@
 # Copyright (c) 2026 BrainBridge Project Team
-# System Diagnostic Tool
+# Released under the MIT License
+# https://opensource.org/licenses/MIT
 
 import sys
 import time
