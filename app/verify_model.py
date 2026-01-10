@@ -11,7 +11,7 @@ def verify():
     try:
         # 1. ファイル読み込み
         checkpoint = torch.load("brain_model_dl.pkl", map_location=torch.device('cpu'))
-        print("✅ ファイル読み込み成功")
+        print("ファイル読み込み成功")
         
         # 2. 中身のチェック
         model = BrainNet(input_size=checkpoint['input_size'])
@@ -22,13 +22,13 @@ def verify():
         encoder = checkpoint['encoder']
         X_test = checkpoint.get('X_test')
         
-        print(f"✅ モデル復元成功 (入力サイズ: {checkpoint['input_size']})")
+        print(f"モデル復元成功 (入力サイズ: {checkpoint['input_size']})")
         
         if X_test is None:
-            print("❌ テストデータが含まれていません！ train_dl.py を実行してください。")
+            print("テストデータが含まれていません！ train_dl.py を実行してください。")
             return
 
-        print(f"✅ テストデータ確認完了 (データ数: {len(X_test)})")
+        print(f"テストデータ確認完了 (データ数: {len(X_test)})")
         
         # 3. 試しに1つ推論してみる
         print("\n--- 推論テスト ---")
@@ -48,10 +48,10 @@ def verify():
             
         pred_label = encoder.inverse_transform(predicted.numpy())[0]
         print(f"AIの判定結果: {pred_label}")
-        print("✅ すべて正常です！")
+        print("すべて正常です！")
         
     except Exception as e:
-        print(f"❌ エラーが発生しました: {e}")
+        print(f"エラーが発生しました: {e}")
 
 if __name__ == "__main__":
     verify()
