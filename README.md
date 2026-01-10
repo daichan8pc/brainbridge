@@ -13,7 +13,7 @@ Raspberry Pi 4 上で動作し、ディープラーニングモデル（PyTorch�
 ### Hardware
 
 - **Device:** Raspberry Pi 4 Model B (4GB/8GB RAM recommended)
-- **Display:** 3.5 inch Touch LCD (or HDMI Display)
+- **Display:** OSOYOO 3.5 inch HDMI Screen v2.0
 - **Sensor:** EEG Headset (connection via LSL/Serial)
 
 ### Software Stack
@@ -26,14 +26,13 @@ Raspberry Pi 4 上で動作し、ディープラーニングモデル（PyTorch�
 
 ## Installation Guide
 
-本システムは、Raspberry Pi の ARM アーキテクチャに最適化するため、**OS 標準ライブラリと Python 仮想環境を併用する「ハイブリッド構成」**を採用しています。
+本システムは、Raspberry Pi の ARM アーキテクチャに最適化するため、OS 標準ライブラリと Python 仮想環境を併用する**ハイブリッド構成**を採用しています。
 
 再現性を確保するため、以下の手順に従って環境を構築してください。
 
 ### 0. OS Preparation (Crucial)
 
 本システムは **Raspberry Pi OS (Bullseye)** での動作を前提としています。
-
 新しい OS（Bookworm 等）では Python の仮想環境ポリシーが異なるため、以下の特定バージョンの OS イメージを使用することを強く推奨します。
 
 1. **OS イメージのダウンロード**
@@ -44,7 +43,6 @@ Raspberry Pi 4 上で動作し、ディープラーニングモデル（PyTorch�
 
 2. **SD カードへの書き込みと初期設定**
    Raspberry Pi Imager 等を使用して、ダウンロードした `.img` ファイルを SD カードに書き込んでください。
-
    ※書き込み時に OS 設定が適用できない場合、以下のいずれかの方法で初期設定（ユーザー作成、Wi-Fi、SSH）を行ってください。
 
    - **方法 A：周辺機器を接続して設定（確実）**
@@ -56,38 +54,74 @@ Raspberry Pi 4 上で動作し、ディープラーニングモデル（PyTorch�
      - `userconf.txt` ： ユーザー自動作成用（形式: `username:encrypted_password`）。
      - `wpa_supplicant.conf` ： Wi-Fi 接続情報記述用。
 
-### 1. Prerequisites (System Libraries)
+### 1. Hardware & System Setup
 
-システムレベルで安定した数値計算ライブラリをインストールします。
+OS の基本設定と、3.5 インチディスプレイのドライバ設定を行います。
 
+#### 1-1. Install System Libraries
+
+システムレベルで安定した数値計算ライブラリと `git` をインストールします。
 ※ `pip` で入れると `Illegal instruction` エラーが出るため、必ず `apt` を使用してください。
 
 ```bash
 sudo apt update
-sudo apt install -y python3-numpy python3-pandas python3-matplotlib libopenblas-dev libatomic1
+sudo apt install -y git python3-numpy python3-pandas python3-matplotlib libopenblas-dev libatomic1
+
 ```
 
-### 2. Setup Virtual Environment
+#### 1-2. Display Driver Setup (OSOYOO v2.0)
+
+OSOYOO 3.5 インチ HDMI スクリーンのドライバをインストールし、解像度を最適化します。
+
+```bash
+# ドライバのリポジトリをクローン
+git clone [https://github.com/osoyoo/HDMI-show.git](https://github.com/osoyoo/HDMI-show.git)
+cd HDMI-show/
+
+# 権限を変更して実行（480x320モードに設定）
+chmod +x hdmi480320
+sudo ./hdmi480320
+
+# ※実行後、自動的に再起動します。
+# 再起動後、画面が正しく表示されることを確認してください。
+
+```
+
+### 2. Project Setup
+
+プロジェクトのソースコードを取得し、Python 環境を構築します。
+
+#### 2-1. Clone Repository
+
+ホームディレクトリにプロジェクトをダウンロードします。
+
+```bash
+cd ~
+git clone https://github.com/daichan8pc/brainbridge.git brainbridge
+cd brainbridge/app
+```
+
+#### 2-2. Setup Virtual Environment
 
 システムパッケージを引き継ぐ設定（`--system-site-packages`）で仮想環境を作成します。
 
 ```bash
-cd brainbridge/app
 # 既存の環境がある場合は削除: rm -rf venv
 python3 -m venv venv --system-site-packages
 source venv/bin/activate
+
 ```
 
 ### 3. Install Dependencies
 
 Python ライブラリをインストールします。
-
 **注意:** `numpy` や `pandas` はインストールせず（システム版を使用）、`streamlit` と `torch` のみを入れます。
 
 ```bash
 pip install streamlit
 # PyTorch (CPU only recommended for Pi)
-pip install torch torchvision --extra-index-url [https://download.pytorch.org/whl/cpu](https://download.pytorch.org/whl/cpu)
+pip install torch torchvision --extra-index-url https://download.pytorch.org/whl/cpu
+
 ```
 
 ## Usage
