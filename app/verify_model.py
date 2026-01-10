@@ -10,7 +10,7 @@ def verify():
     print("--- 検証開始 ---")
     try:
         # 1. ファイル読み込み
-        checkpoint = torch.load("brain_model_dl.pkl", map_location=torch.device('cpu'), weights_only=False)
+        checkpoint = torch.load("brain_model_dl.pkl", map_location=torch.device('cpu'))
         print("✅ ファイル読み込み成功")
         
         # 2. 中身のチェック

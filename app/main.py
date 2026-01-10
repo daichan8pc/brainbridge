@@ -2,69 +2,70 @@
 # Released under the MIT License
 # https://opensource.org/licenses/MIT
 import os
-os.environ['OPENBLAS_CORETYPE'] = 'ARMV8'
+# 自動判定に任せる
+# os.environ['OPENBLAS_CORETYPE'] = 'ARMV8'
 
 import streamlit as st
 import time
 import pandas as pd
-import torch
 import numpy as np
-from brain_net import BrainNet
+import matplotlib.pyplot as plt
 
-# --- 1. 画面設定 ---
+# --- 1. 画面設定（最速で実行） ---
 st.set_page_config(page_title="BrainBridge", layout="wide")
 
-# CSSでデザインを調整（黒背景、ハイコントラスト）
+# CSS設定
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #00FF41; }
     h1, h2, h3 { color: #FFFFFF; font-family: 'Courier New', monospace; }
-    
-    /* 結果表示のボックス */
     .result-box {
-        border: 2px solid #FFFFFF;
-        padding: 20px;
-        text-align: center;
-        border-radius: 10px;
-        margin-top: 10px;
+        border: 2px solid #FFFFFF; padding: 20px; text-align: center;
+        border-radius: 10px; margin-top: 10px;
     }
-    .result-text {
-        font-size: 50px !important;
-        font-weight: bold;
-        color: white;
-    }
-    
-    /* ボタンのスタイル */
+    .result-text { font-size: 50px !important; font-weight: bold; color: white; }
     .stButton > button {
-        width: 100%;
-        height: 80px;
-        font-size: 24px !important;
-        background-color: #333333;
-        color: white;
-        border: 1px solid #00FF41;
-        border-radius: 5px;
+        width: 100%; height: 80px; font-size: 24px !important;
+        background-color: #333333; color: white;
+        border: 1px solid #00FF41; border-radius: 5px;
     }
     .stButton > button:active { background-color: #00FF41; color: black; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. モデル読み込み ---
+# --- 2. モデル読み込み関数 ---
 @st.cache_resource
 def load_model_resources():
+    import torch
+    from brain_net import BrainNet
+
     try:
-        # weights_only=False で読み込み
-        checkpoint = torch.load("brain_model_dl.pkl", map_location=torch.device('cpu'), weights_only=False)
+        print("Loading PyTorch model...")
+        checkpoint = torch.load("brain_model_dl.pkl", map_location=torch.device('cpu'))
+        
         model = BrainNet(input_size=checkpoint['input_size'])
         model.load_state_dict(checkpoint['model_state'])
         model.eval()
+        
+        print("Model loaded successfully!")
         return model, checkpoint['scaler'], checkpoint['encoder'], checkpoint.get('X_test'), checkpoint.get('y_test')
     except Exception as e:
-        st.error(f"Error: {e}")
+        print(f"Error loading model: {e}")
         return None, None, None, None, None
 
-model, scaler, encoder, X_test, y_test = load_model_resources()
+# --- 3. メイン処理 ---
+st.markdown("<h2 style='text-align: center;'>BrainBridge AI System</h2>", unsafe_allow_html=True)
 
-# --- 3. データ取得（シミュレーション） ---
+# タイトル表示後、スピナーを回しながら読み込みを開始
+with st.spinner('システム起動中... AIモデルを読み込んでいます...'):
+    model, scaler, encoder, X_test, y_test = load_model_resources()
+
+# 読み込み失敗時のガード
+if model is None:
+    st.error("モデルの読み込みに失敗しました。")
+    st.stop()
+
+# --- 4. 補助関数（torchを使うためここでもimportが必要な場合があるが、ロード済みならOK） ---
 def get_realtime_eeg():
     if X_test is not None:
         idx = np.random.randint(0, len(X_test))
@@ -75,19 +76,15 @@ def get_realtime_eeg():
         return raw_data
     return np.random.rand(1, 2548)
 
-# --- 4. メインアプリ ---
-st.markdown("<h2 style='text-align: center;'>BrainBridge AI System</h2>", unsafe_allow_html=True)
-
+# --- 5. UIロジック ---
 if 'result_emotion' not in st.session_state:
     st.session_state['result_emotion'] = None
     st.session_state['probs'] = None
 
-# === A. 結果表示画面 ===
 if st.session_state['result_emotion']:
     emotion = st.session_state['result_emotion']
     probs = st.session_state['probs']
     
-    # 色分け
     if "POSITIVE" in emotion.upper(): bg = "#28a745"
     elif "NEGATIVE" in emotion.upper(): bg = "#dc3545"
     else: bg = "#6c757d"
@@ -99,33 +96,32 @@ if st.session_state['result_emotion']:
         </div>
     """, unsafe_allow_html=True)
     
-    # 確率グラフの表示（もっともらしく見せる）
     if probs is not None:
         st.write("---")
-        st.write("Confidence Level:")
-        chart_data = pd.DataFrame(probs, index=["NEG", "NEU", "POS"], columns=["Probability"])
-        st.bar_chart(chart_data)
+        class_names = encoder.classes_ if hasattr(encoder, 'classes_') else ["NEG", "NEU", "POS"]
+        if len(probs) == len(class_names):
+            chart_data = pd.DataFrame(probs, index=class_names, columns=["Probability"])
+            st.bar_chart(chart_data)
+        else:
+            st.bar_chart(probs)
 
     st.write("")
     if st.button("RESTART SYSTEM"):
         st.session_state['result_emotion'] = None
         st.rerun()
 
-# === B. 計測・待機画面 ===
 else:
-    # 波形表示用の空枠
     chart_placeholder = st.empty()
     status_text = st.empty()
     
     if st.button("START ANALYSIS"):
+        import torch # ここでも念のため
         predictions = []
         all_probs = []
         
-        # 3秒間ループ（演出）
         for i in range(15):
             status_text.markdown(f"**Acquiring Brain Waves...** ({int((i/15)*100)}%)")
             
-            # データ取得＆推論
             raw_data = get_realtime_eeg()
             input_tensor = torch.FloatTensor(scaler.transform(raw_data))
             
@@ -134,18 +130,27 @@ else:
                 prob = torch.nn.functional.softmax(output, dim=1).numpy()[0]
                 _, predicted = torch.max(output, 1)
             
-            # グラフ用にデータを間引いて表示（全部だと重いため）
             display_wave = raw_data[0][::10] 
-            chart_placeholder.line_chart(display_wave, height=150)
+            # Matplotlibで描画する方式に変更
+            fig, ax = plt.subplots(figsize=(6, 2)) # サイズはお好みで
+            ax.plot(display_wave)
+            # 余計な枠線を消してスッキリさせる（お好みで）
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+
+            # Streamlitに渡す
+            chart_placeholder.pyplot(fig)
+
+            # メモリリーク防止（ループで回すなら必須）
+            plt.close(fig)
             
             predictions.append(predicted.item())
             all_probs.append(prob)
             time.sleep(0.1)
             
-        # 最終判定
         final_idx = max(set(predictions), key=predictions.count)
         final_emotion = encoder.inverse_transform([final_idx])[0]
-        final_probs = np.mean(all_probs, axis=0) # 平均確率
+        final_probs = np.mean(all_probs, axis=0)
         
         st.session_state['result_emotion'] = final_emotion
         st.session_state['probs'] = final_probs
