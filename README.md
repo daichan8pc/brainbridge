@@ -30,7 +30,7 @@ BrainBridgeは、感情表現が困難な方のための意思疎通支援デバ
 
 ### 1. リポジトリのクローン（または配置）
 ```bash
-git clone <repository_url>
+git clone https://github.com/daichan8pc/BrainBridge.git
 cd BrainBridge/app
 ```
 
