@@ -99,11 +99,44 @@ if st.session_state['result_emotion']:
     if probs is not None:
         st.write("---")
         class_names = encoder.classes_ if hasattr(encoder, 'classes_') else ["NEG", "NEU", "POS"]
+        
+        # --- Matplotlibで棒グラフを描画（PyArrow回避） ---
+        # グラフのサイズ設定
+        fig_bar, ax_bar = plt.subplots(figsize=(6, 3))
+        
+        # 背景を透明にする（アプリの黒背景に馴染ませるため）
+        fig_bar.patch.set_alpha(0)
+        ax_bar.patch.set_alpha(0)
+        
+        # 棒グラフを作成（色はBrainBridgeカラーの緑 #00FF41 に合わせる）
+        # x軸: class_names, y軸: probs
+        # データ長が合わない場合のガード処理も兼ねる
         if len(probs) == len(class_names):
-            chart_data = pd.DataFrame(probs, index=class_names, columns=["Probability"])
-            st.bar_chart(chart_data)
+            ax_bar.bar(class_names, probs, color='#00FF41')
         else:
-            st.bar_chart(probs)
+            # 万が一長さが合わない場合はインデックス番号で表示
+            ax_bar.bar(range(len(probs)), probs, color='#00FF41')
+        
+        # 文字色を白にする（背景が黒なので）
+        ax_bar.tick_params(axis='x', colors='white')
+        ax_bar.tick_params(axis='y', colors='white')
+        
+        # 枠線の色設定
+        ax_bar.spines['bottom'].set_color('white')
+        ax_bar.spines['left'].set_color('white')
+        
+        # 不要な枠線（上と右）を消す
+        ax_bar.spines['top'].set_visible(False)
+        ax_bar.spines['right'].set_visible(False)
+        
+        # タイトル設定
+        ax_bar.set_title("Probability Distribution", color='white')
+
+        # Streamlitに表示
+        st.pyplot(fig_bar)
+        
+        # メモリ開放（重要）
+        plt.close(fig_bar)
 
     st.write("")
     if st.button("RESTART SYSTEM"):
@@ -115,7 +148,7 @@ else:
     status_text = st.empty()
     
     if st.button("START ANALYSIS"):
-        import torch # ここでも念のため
+        import torch
         predictions = []
         all_probs = []
         
