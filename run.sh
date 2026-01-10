@@ -1,36 +1,49 @@
 #!/bin/bash
 
+# ログファイルに出力（デバッグ用）
+exec > >(tee -a /home/pi/brainbridge/app.log) 2>&1
+echo "--- Starting BrainBridge System: $(date) ---"
+
 # 1. 環境設定
 export OPENBLAS_CORETYPE=ARMV8
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
+export DISPLAY=:0
 
-# 2. 仮想環境に入る
-source ~/brainbridge/app/venv/bin/activate
-# プロキシ設定を消す
+# 2. ディレクトリ移動（★ここが最重要！モデルファイル読み込みに必須）
+cd /home/pi/brainbridge/app
+
+# 3. 仮想環境に入る
+source venv/bin/activate
+
+# プロキシ設定を消す（学校/寮のネット環境対策）
 unset http_proxy
 unset https_proxy
 unset HTTP_PROXY
 unset HTTPS_PROXY
 
-# 3. アプリを起動
-echo "Starting Streamlit..."
-# 既存プロセスをクリーンアップ
+# 4. クリーンアップ（前回終了時のゴミプロセスを消す）
+echo "Cleaning up previous processes..."
 pkill -f chromium
 pkill -f streamlit
-# --server.address 0.0.0.0 に設定
-streamlit run ~/brainbridge/app/main.py --server.headless true --server.address 0.0.0.0 --server.enableCORS false --server.enableXsrfProtection false &
+
+# 5. アプリを起動
+echo "Starting Streamlit..."
+# --server.headless true: ヘッダーなどを消す
+# --server.runOnSave false: 本番運用向け
+streamlit run main.py --server.port 8501 --server.headless true --server.runOnSave false &
 APP_PID=$!
 
-# 4. 起動待ち(20秒待つ)
-# 初回はPyTorchの読み込みに時間がかかるため、ここでしっかり待つ
-echo "Waiting for 20 seconds..."
+# 6. 起動待ち(サーバーが立ち上がるまで20秒待つ)
+echo "Waiting for Streamlit to launch..."
 sleep 20
 
-# 5. ブラウザを起動
+# 7. ブラウザを起動（キオスクモード）
 echo "Starting Chromium..."
-export DISPLAY=:0
-chromium-browser --no-sandbox --disable-gpu --proxy-server="direct://" --proxy-bypass-list="*" --kiosk http://127.0.0.1:8501
+# --kiosk: 全画面
+# --incognito: シークレットモード（キャッシュ対策）
+# --noerrdialogs: エラーダイアログを出さない
+chromium-browser --kiosk --incognito --noerrdialogs --disable-infobars http://localhost:8501
 
-# 終了処理
-# kill $APP_PID
+# ブラウザが閉じられたら終了
+kill $APP_PID
