@@ -5,3 +5,4 @@ __pycache__/
 venv/
 README.pdf
 .code-workspace
+app.log
