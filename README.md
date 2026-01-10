@@ -1,119 +1,134 @@
-# BrainBridge - AI Emotion Recognition System
+# BrainBridge - EEG Emotion Recognition System
 
-## 1. プロジェクト概要サマリー（二次審査提出用）
-BrainBridgeは、感情表現が困難な方のための意思疎通支援デバイスです。Raspberry Piと独自AIモデルを用いて脳波データをリアルタイム解析し、ポジティブ・ネガティブ等の感情を即座に可視化します。ネット不要のスタンドアロン動作と、直感的なUIによるフィードバックを実現。「心」を置き去りにしない、新しいコミュニケーションの形を提案します。（189文字）
+**BrainBridge** は、脳波（EEG）を解析し、リアルタイムで感情（Positive / Negative / Neutral）を推定・可視化するシステムです。
+Raspberry Pi 4 上で動作し、ディープラーニングモデル（PyTorch）とタッチパネルUI（Streamlit）を組み合わせたスタンドアローンデバイスとして設計されています。
 
-## 2. 特徴
-* **リアルタイム感情可視化:** 脳波データから感情状態（Positive / Negative / Neutral）を推論し、ディスプレイに表示。
-* **エッジAI駆動:** Raspberry Pi 4上で完結する軽量Deep Learningモデル（PyTorch）を実装。外部サーバー不要でプライバシーにも配慮。
-* **キオスクモード搭載:** 電源を入れるだけで自動的にアプリが全画面起動するアプライアンス設計。
-* **サイバーパンクUI:** 視認性の高いハイコントラストなStreamlitベースのGUI。
+**Team:** BrainBridge Project Team (Numazu KOSEN & Nara KOSEN)
+**Event:** DCON2026 (Deep Learning Contest 2026) Project
 
-## 3. ハードウェア要件
-* **Main Board:** Raspberry Pi 4 Model B (4GB or 8GB recommended)
-* **Display:** 3.5 inch HDMI LCD Display (480x320 resolution) with Touch support
-* **Power:** Mobile Battery (USB-C 5V/3A output)
-* **Storage:** MicroSD Card (32GB+)
-* **Network:** Wi-Fi (for initial setup and maintenance)
+## System Architecture
 
-## 4. ソフトウェア要件
-* **OS:** Raspberry Pi OS (64-bit / Bullseye or Bookworm)
-* **Language:** Python 3.9+
-* **Key Libraries:**
-    * Streamlit (UI Framework)
-    * PyTorch (Deep Learning)
-    * Scikit-learn (Preprocessing)
-    * Pandas / NumPy (Data manipulation)
+### Hardware
+- **Device:** Raspberry Pi 4 Model B (4GB/8GB RAM recommended)
+- **Display:** 3.5 inch Touch LCD (or HDMI Display)
+- **Sensor:** EEG Headset (connection via LSL/Serial)
 
-## 5. インストール手順
-本システムはRaspberry Piのシステムライブラリ（apt）を活用し、仮想環境で動作させます。
+### Software Stack
+- **OS:** Raspberry Pi OS Legacy (Bullseye) 64-bit
+- **Language:** Python 3.9+
+- **GUI Framework:** Streamlit (Kiosk Mode)
+- **AI Engine:** PyTorch (Neural Network)
+- **Visualization:** Matplotlib (Optimized for ARM architecture)
 
-### 1. リポジトリのクローン（または配置）
-```bash
-git clone https://github.com/daichan8pc/BrainBridge.git
-cd BrainBridge/app
-```
+## Installation Guide
 
-### 2. システム依存関係のインストール
+本システムは、Raspberry Pi の ARMアーキテクチャに最適化するため、**OS標準ライブラリとPython仮想環境を併用する「ハイブリッド構成」**を採用しています。
+再現性を確保するため、以下の手順に従って環境を構築してください。
 
-NumPyやPandasの互換性問題を回避するため、apt経由でのインストールを推奨します。
+### 0. OS Preparation (Crucial)
+本システムは **Raspberry Pi OS (Bullseye)** での動作を前提としています。
+新しいOS（Bookworm等）ではPythonの仮想環境ポリシーが異なるため、以下の特定バージョンのOSイメージを使用することを強く推奨します。
+
+1. **OSイメージのダウンロード**
+   以下のリンクまたはアーカイブから、`2024-07-04-raspios-bullseye-arm64.img` をダウンロードしてください。
+   * **Version:** Raspberry Pi OS Legacy (64-bit) Bullseye
+   * **Release Date:** 2024-07-04
+
+2. **SDカードへの書き込みと初期設定**
+   Raspberry Pi Imager 等を使用して、ダウンロードした `.img` ファイルをSDカードに書き込んでください。
+   ※書き込み時にOS設定が適用できない場合、以下のいずれかの方法で初期設定（ユーザー作成、Wi-Fi、SSH）を行ってください。
+
+   * **方法A：周辺機器を接続して設定（確実）**
+     Raspberry Piにモニター、キーボード、マウスを接続して起動し、画面のウィザードに従ってユーザー名（`pi`推奨）やWi-Fiの設定を完了させてください。
+
+   * **方法B：SDカードに設定ファイルを配置（ヘッドレス）**
+     書き込み完了後、PC上でSDカードの `boot` パーティションを開き、直下に以下のファイルを作成することで自動設定が可能です。
+     * `ssh` （空ファイル）： SSHを有効化します。
+     * `userconf.txt` ： ユーザー自動作成用（形式: `username:encrypted_password`）。
+     * `wpa_supplicant.conf` ： Wi-Fi接続情報記述用。
+
+### 1. Prerequisites (System Libraries)
+システムレベルで安定した数値計算ライブラリをインストールします。
+※ `pip` で入れると `Illegal instruction` エラーが出るため、必ず `apt` を使用してください。
 
 ```bash
 sudo apt update
-sudo apt install -y python3-numpy python3-pandas python3-scikit-learn
+sudo apt install -y python3-numpy python3-pandas python3-matplotlib libopenblas-dev libatomic1
 ```
 
-### 3. 仮想環境の構築
+### 2. Setup Virtual Environment
 
-システムパッケージを引き継ぐ設定（`--system-site-packages`）で環境を作成します。
+システムパッケージを引き継ぐ設定（`--system-site-packages`）で仮想環境を作成します。
 
 ```bash
-# 既存の環境がある場合は削除
-rm -rf venv
-
-# 仮想環境作成
+cd brainbridge/app
+# 既存の環境がある場合は削除: rm -rf venv
 python3 -m venv venv --system-site-packages
-
-# アクティベート
 source venv/bin/activate
-
-# Pythonライブラリのインストール
-pip install streamlit torch torchvision
 ```
 
-### 4. 学習モデルの生成
+### 3. Install Dependencies
 
-デモ用の軽量モデルを生成します。
+Python ライブラリをインストールします。
+**注意:** `numpy` や `pandas` はインストールせず（システム版を使用）、`streamlit` と `torch` のみを入れます。
 
 ```bash
-python3 train_dl.py
-# "Model saved..." と表示されれば成功
+pip install streamlit
+# PyTorch (CPU only recommended for Pi)
+pip install torch torchvision --extra-index-url [https://download.pytorch.org/whl/cpu](https://download.pytorch.org/whl/cpu)
 ```
 
-## 6. 実行方法
+## Usage
 
-### 通常起動（開発・テスト用）
+### Manual Start (Debug Mode)
+
+開発やデバッグを行う場合は、以下のスクリプトを使用します。
 
 ```bash
-source venv/bin/activate
-
-# 重要: Raspberry Piでのクラッシュ回避用設定
-export OPENBLAS_CORETYPE=ARMV8
-
-# アプリケーション起動
-streamlit run main.py --server.address 0.0.0.0
+cd ~/brainbridge
+./run.sh
 ```
 
-### 自動起動（キオスクモード）設定
-以下のスクリプトを実行することで、起動時にアプリが自動的に全画面表示されるようになります。
+### Kiosk Mode (Auto Start)
+
+電源投入時に自動的に全画面でアプリを起動するには、以下のセットアップを実行してください。
 
 ```bash
-chmod +x setup/install_kiosk.sh
-./setup/install_kiosk.sh
+cd ~/brainbridge/setup
+chmod +x install_kiosk.sh
+./install_kiosk.sh
 sudo reboot
 ```
 
-## 7. 終了方法
+設定ファイルは `~/.config/lxsession/LXDE-pi/autostart` に配置されます。
 
-* **ターミナル実行時:** `Ctrl + C` を押してプロセスを停止します。
-* **キオスクモード時:** キーボードを接続し、`Alt + F4` で閉じるか、SSH経由で再起動してください。
-
-## 8. ファイル構成
+## Project Structure
 
 ```text
-BrainBridge/
-└── app/
-    ├── main.py             # アプリケーション本体（UI/推論ロジック）
-    ├── brain_net.py        # ニューラルネットワーク定義クラス
-    ├── train_dl.py         # モデル学習用スクリプト
-    ├── check_crash.py      # 環境依存エラー（Illegal instruction）診断用
-    ├── brain_model_dl.pkl  # 学習済みモデル（train_dl.pyで生成）
-    ├── requirements.txt    # 依存ライブラリ一覧
-    ├── data/
-    │   └── emotions.csv    # 学習・推論テスト用データセット
-    └── venv/               # Python仮想環境（除外対象）
+brainbridge/
+├── app/
+│   ├── main.py            # アプリケーション本体 (Streamlit)
+│   ├── brain_net.py       # AIモデル定義 (PyTorch Class)
+│   ├── brain_model_dl.pkl # 学習済みモデル & スケーラー
+│   └── train_dl.py        # 学習用スクリプト
+├── setup/
+│   ├── autostart          # LXDE自動起動設定ファイル
+│   └── install_kiosk.sh   # 自動起動インストーラー
+├── tools/
+│   ├── diagnose.py        # 環境診断ツール (Check libraries)
+│   └── verify_model.py    # モデル整合性チェックツール
+└── run.sh                 # 統合起動スクリプト
 ```
 
+## Troubleshooting
+
+**Q. "Illegal instruction" エラーが出る**
+A. `pip` でインストールされた `numpy` や `pandas` が ARMv6/v7 用の命令を含んでいる可能性があります。`tools/diagnose.py` を実行して環境を確認し、問題があればシステム版（apt）に入れ替えてください。
+
+**Q. グラフが表示されない / エラーになる**
+A. `PyArrow` がインストールされているとクラッシュする場合があります。本システムは `Matplotlib` を使用して描画を行ってください。
+
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+[MIT License](https://opensource.org/licenses/MIT)
 (c) 2026 BrainBridge Project Team
