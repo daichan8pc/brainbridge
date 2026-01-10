@@ -1,7 +1,2 @@
-torch
-torchvision
-torchaudio
-pandas
-numpy
-scikit-learn
 streamlit
+scikit-learn
