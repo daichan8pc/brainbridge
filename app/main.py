@@ -12,27 +12,55 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- 1. 画面設定（最速で実行） ---
+# --- 1. 画面設定 ---
 st.set_page_config(page_title="BrainBridge", layout="wide")
 
 # CSS設定
 st.markdown("""
     <style>
-    .stApp { background-color: #000000; color: #00FF41; }
-    h1, h2, h3 { color: #FFFFFF; font-family: 'Courier New', monospace; }
-    .result-box {
-        border: 2px solid #FFFFFF; padding: 20px; text-align: center;
-        border-radius: 10px; margin-top: 10px;
+    /* 全体の背景色と文字色 */
+    .stApp {
+        background-color: #000000;
+        color: #00FF41;
     }
-    .result-text { font-size: 50px !important; font-weight: bold; color: white; }
+    
+    /* 1. 上部のヘッダーバーを完全非表示にする */
+    header[data-testid="stHeader"] {
+        display: none;
+    }
+    
+    /* 2. 上下の余白（パディング）を極限まで削る */
+    .block-container {
+        padding-top: 0rem !important;   /* 上の隙間をゼロに */
+        padding-bottom: 0rem !important; /* 下の隙間もゼロに */
+        padding-left: 1rem !important;   /* 左右は少し開けないと見切れる */
+        padding-right: 1rem !important;
+        max-width: 100%;
+    }
+
+    /* 3. フッター（Made with Streamlit）も消す */
+    footer {
+        display: none;
+    }
+
+    /* --- 以下、既存のデザイン設定 --- */
+    h1, h2, h3 { color: #FFFFFF; font-family: 'Courier New', monospace; margin-bottom: 0px; }
+    
+    .result-box {
+        border: 2px solid #FFFFFF; padding: 10px; text-align: center;
+        border-radius: 10px; margin-top: 5px; margin-bottom: 5px;
+    }
+    .result-text { font-size: 40px !important; font-weight: bold; color: white; }
+    
     .stButton > button {
-        width: 100%; height: 80px; font-size: 24px !important;
+        width: 100%; height: 60px; font-size: 20px !important;
         background-color: #333333; color: white;
         border: 1px solid #00FF41; border-radius: 5px;
+        margin-top: 5px;
     }
     .stButton > button:active { background-color: #00FF41; color: black; }
     </style>
-    """, unsafe_allow_html=True)
+    """,unsafe_allow_html=True)
 
 # --- 2. モデル読み込み関数 ---
 @st.cache_resource

@@ -1,4 +1,5 @@
-@lxpanel --profile LXDE-pi
+OSのバーを非表示にする
+# @lxpanel --profile LXDE-pi
 @pcmanfm --desktop --profile LXDE-pi
 @xscreensaver -no-splash
 
