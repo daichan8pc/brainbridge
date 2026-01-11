@@ -105,7 +105,8 @@ def load_model():
 def main():
     # タイトル（常時表示、小さく）
     st.markdown("<h3>BrainBridge AI System</h3>", unsafe_allow_html=True)
-
+    # デモモード（公開データセットを用いた学習であることを示す）
+    st.markdown("※ Demo Mode: Emulating EEG Input from test dataset.")
     model, scaler, encoder, X_test, y_test = load_model()
     if model is None:
         return
