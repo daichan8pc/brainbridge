@@ -2,257 +2,227 @@
 # Released under the MIT License
 # https://opensource.org/licenses/MIT
 
-import os
-# 自動判定に任せる
-# os.environ['OPENBLAS_CORETYPE'] = 'ARMV8'
-
 import streamlit as st
-import time
-import pandas as pd
+import torch
 import numpy as np
+import pandas as pd
+import time
 import matplotlib.pyplot as plt
+from brain_net import BrainNet
 
-# --- 1. 画面設定（最速で実行） ---
+# --- 1. 画面設定 & CSS (1画面収束・コンパクト版) ---
 st.set_page_config(page_title="BrainBridge", layout="wide")
 
-# CSS設定（3.5インチ画面 & タッチパネル特化版）
 st.markdown("""
     <style>
-    /* 0. マウスカーソルを全域で抹消（最重要） */
+    /* 0. 基本設定: カーソルなし、選択不可 */
     * {
         cursor: none !important;
+        -webkit-user-select: none;
+        user-select: none;
     }
-    
-    /* 全体の背景色と文字色 */
+
+    /* 1. 全体の背景と余白の削除 */
     .stApp {
         background-color: #000000;
         color: #00FF41;
     }
     
-    /* 1. 上部のヘッダーバーを完全非表示 */
-    header[data-testid="stHeader"] {
-        display: none;
-    }
-    
-    /* 2. 余白を極限まで削る */
+    /* ヘッダー・フッター削除 */
+    header[data-testid="stHeader"], footer { display: none; }
+
+    /* 余白を極限まで削る（上下左右ギリギリまで使う） */
     .block-container {
-        padding-top: 0rem !important;
-        padding-bottom: 0rem !important;
-        padding-left: 0.5rem !important; /* 横幅確保のため少し減らす */
-        padding-right: 0.5rem !important;
+        padding: 0.5rem 0.5rem !important;
         max-width: 100%;
     }
 
-    /* 3. フッター削除 */
-    footer {
-        display: none;
+    /* 2. タイトルの小型化 */
+    h3 {
+        font-family: 'Courier New', monospace;
+        font-size: 18px !important;
+        margin: 0px 0px 5px 0px !important;
+        color: #AAAAAA;
+        text-align: center;
+        border-bottom: 1px solid #333333;
     }
 
-    /* --- タッチUI最適化 --- */
-    h1, h2, h3 { 
-        color: #FFFFFF; 
-        font-family: 'Courier New', monospace; 
-        margin-bottom: 0px; 
-    }
-    
+    /* 3. 結果表示ボックス（左側） */
     .result-box {
-        border: 2px solid #FFFFFF; padding: 10px; text-align: center;
-        border-radius: 10px; margin-top: 5px; margin-bottom: 5px;
-    }
-    .result-text { 
-        font-size: 40px !important; 
-        font-weight: bold; 
-        color: white; 
-    }
-    
-    /* ボタン: 指で押しやすいサイズに巨大化 */
-    .stButton > button {
-        width: 100%; 
-        height: 80px; /* 60px -> 80px に拡大 */
-        font-size: 24px !important; /* 文字も大きく */
-        font-weight: bold;
-        background-color: #333333; 
-        color: white;
-        border: 2px solid #00FF41; /* 枠線を太く */
-        border-radius: 10px;
-        margin-top: 10px;
+        border: 2px solid #FFFFFF;
+        padding: 5px;
+        text-align: center;
+        border-radius: 8px;
         margin-bottom: 10px;
-        
-        /* カーソル消失のダメ押し */
-        cursor: none !important;
+        background-color: #111111;
+    }
+    .result-label {
+        font-size: 14px; color: #AAAAAA; margin: 0;
+    }
+    .result-text {
+        font-size: 32px !important; /* 少し小さくしてはみ出し防止 */
+        font-weight: bold;
+        color: #FFFFFF;
+        margin: 0;
+        line-height: 1.2;
     }
     
-    /* ボタンを押した時の反応（タッチフィードバック） */
-    .stButton > button:active { 
-        background-color: #00FF41; 
-        color: black; 
-        transform: scale(0.98); /* 押した感触を出すために少し縮む */
+    /* 4. ボタン（共通） */
+    .stButton > button {
+        width: 100%;
+        height: 50px; /*高さを抑える*/
+        font-size: 18px !important;
+        font-weight: bold;
+        background-color: #333333;
+        color: white;
+        border: 2px solid #00FF41;
+        border-radius: 8px;
+        margin-top: 5px;
     }
-    
-    /* フォーカス時の青い枠線を消す（重要） */
-    .stButton > button:focus {
-        outline: none !important;
-        box-shadow: none !important;
-        border-color: #00FF41 !important;
-        color: white !important;
+    .stButton > button:active {
+        background-color: #00FF41;
+        color: black;
+        transform: scale(0.98);
     }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 2. モデル読み込み関数 ---
 @st.cache_resource
-def load_model_resources():
-    import torch
-    from brain_net import BrainNet
-
+def load_model():
     try:
-        print("Loading PyTorch model...")
         checkpoint = torch.load("brain_model_dl.pkl", map_location=torch.device('cpu'))
-        
-        model = BrainNet(input_size=checkpoint['input_size'])
+        input_size = checkpoint['input_size']
+        model = BrainNet(input_size=input_size)
         model.load_state_dict(checkpoint['model_state'])
         model.eval()
-        
-        print("Model loaded successfully!")
         return model, checkpoint['scaler'], checkpoint['encoder'], checkpoint.get('X_test'), checkpoint.get('y_test')
     except Exception as e:
-        print(f"Error loading model: {e}")
+        st.error(f"System Error: {e}")
         return None, None, None, None, None
 
 # --- 3. メイン処理 ---
-st.markdown("<h2 style='text-align: center;'>BrainBridge AI System</h2>", unsafe_allow_html=True)
+def main():
+    # タイトル（常時表示、小さく）
+    st.markdown("<h3>BrainBridge AI System</h3>", unsafe_allow_html=True)
 
-# タイトル表示後、スピナーを回しながら読み込みを開始
-with st.spinner('システム起動中... AIモデルを読み込んでいます...'):
-    model, scaler, encoder, X_test, y_test = load_model_resources()
+    model, scaler, encoder, X_test, y_test = load_model()
+    if model is None:
+        return
 
-# 読み込み失敗時のガード
-if model is None:
-    st.error("モデルの読み込みに失敗しました。")
-    st.stop()
+    # セッション状態の管理
+    if 'analyzing' not in st.session_state:
+        st.session_state.analyzing = False
+    if 'result' not in st.session_state:
+        st.session_state.result = None
+    if 'probs' not in st.session_state:
+        st.session_state.probs = None
 
-# --- 4. 補助関数（torchを使うためここでもimportが必要な場合があるが、ロード済みならOK） ---
-def get_realtime_eeg():
-    if X_test is not None:
-        idx = np.random.randint(0, len(X_test))
-        if hasattr(X_test, 'iloc'):
-            raw_data = X_test.iloc[idx].values.reshape(1, -1)
-        else:
-            raw_data = X_test[idx].reshape(1, -1)
-        return raw_data
-    return np.random.rand(1, 2548)
+    # --- A. 待機画面 (STARTボタンのみ) ---
+    if not st.session_state.analyzing and st.session_state.result is None:
+        st.info("System Ready.")
+        st.write("") # スペース調整
+        st.write("")
+        if st.button("START ANALYSIS"):
+            st.session_state.analyzing = True
+            st.rerun()
 
-# --- 5. UIロジック ---
-if 'result_emotion' not in st.session_state:
-    st.session_state['result_emotion'] = None
-    st.session_state['probs'] = None
-
-if st.session_state['result_emotion']:
-    emotion = st.session_state['result_emotion']
-    probs = st.session_state['probs']
-    
-    if "POSITIVE" in emotion.upper(): bg = "#28a745"
-    elif "NEGATIVE" in emotion.upper(): bg = "#dc3545"
-    else: bg = "#6c757d"
-    
-    st.markdown(f"""
-        <div class="result-box" style="background-color: {bg};">
-            <div style="font-size: 20px; color: #ddd;">DETECTED EMOTION</div>
-            <div class="result-text">{emotion}</div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    if probs is not None:
-        st.write("---")
-        class_names = encoder.classes_ if hasattr(encoder, 'classes_') else ["NEG", "NEU", "POS"]
+    # --- B. 分析中画面 (プログレスバー) ---
+    elif st.session_state.analyzing:
+        msg_placeholder = st.empty()
+        bar = st.progress(0)
         
-        # --- Matplotlibで棒グラフを描画（PyArrow回避） ---
-        # グラフのサイズ設定
-        fig_bar, ax_bar = plt.subplots(figsize=(6, 3))
+        # 演出: 脳波取得中...
+        msg_placeholder.text("Acquiring EEG Signal...")
+        for i in range(100):
+            time.sleep(0.02) # 2秒待つ演出
+            bar.progress(i + 1)
         
-        # 背景を透明にする（アプリの黒背景に馴染ませるため）
-        fig_bar.patch.set_alpha(0)
-        ax_bar.patch.set_alpha(0)
-        
-        # 棒グラフを作成（色はBrainBridgeカラーの緑 #00FF41 に合わせる）
-        # x軸: class_names, y軸: probs
-        # データ長が合わない場合のガード処理も兼ねる
-        if len(probs) == len(class_names):
-            ax_bar.bar(class_names, probs, color='#00FF41')
-        else:
-            # 万が一長さが合わない場合はインデックス番号で表示
-            ax_bar.bar(range(len(probs)), probs, color='#00FF41')
-        
-        # 文字色を白にする（背景が黒なので）
-        ax_bar.tick_params(axis='x', colors='white')
-        ax_bar.tick_params(axis='y', colors='white')
-        
-        # 枠線の色設定
-        ax_bar.spines['bottom'].set_color('white')
-        ax_bar.spines['left'].set_color('white')
-        
-        # 不要な枠線（上と右）を消す
-        ax_bar.spines['top'].set_visible(False)
-        ax_bar.spines['right'].set_visible(False)
-        
-        # タイトル設定
-        ax_bar.set_title("Probability Distribution", color='white')
-
-        # Streamlitに表示
-        st.pyplot(fig_bar)
-        
-        # メモリ開放（重要）
-        plt.close(fig_bar)
-
-    st.write("")
-    if st.button("RESTART SYSTEM"):
-        st.session_state['result_emotion'] = None
-        st.rerun()
-
-else:
-    chart_placeholder = st.empty()
-    status_text = st.empty()
-    
-    if st.button("START ANALYSIS"):
-        import torch
-        predictions = []
-        all_probs = []
-        
-        for i in range(15):
-            status_text.markdown(f"**Acquiring Brain Waves...** ({int((i/15)*100)}%)")
+        # 推論実行
+        if X_test is not None:
+            # ランダムに1つデータを選ぶ
+            idx = np.random.randint(0, len(X_test))
+            if hasattr(X_test, 'iloc'):
+                raw_data = X_test.iloc[idx].values.reshape(1, -1)
+            else:
+                raw_data = X_test[idx].reshape(1, -1)
             
-            raw_data = get_realtime_eeg()
-            input_tensor = torch.FloatTensor(scaler.transform(raw_data))
+            input_scaled = scaler.transform(raw_data)
+            input_tensor = torch.FloatTensor(input_scaled)
             
             with torch.no_grad():
                 output = model(input_tensor)
-                prob = torch.nn.functional.softmax(output, dim=1).numpy()[0]
+                probs = torch.softmax(output, dim=1).numpy()[0] # 確率分布
                 _, predicted = torch.max(output, 1)
+                
+            pred_label = encoder.inverse_transform(predicted.numpy())[0]
             
-            display_wave = raw_data[0][::10] 
-            # Matplotlibで描画する方式に変更
-            fig, ax = plt.subplots(figsize=(6, 2)) # サイズはお好みで
-            ax.plot(display_wave)
-            # 余計な枠線を消してスッキリさせる（お好みで）
+            # 結果を保存して画面遷移
+            st.session_state.result = pred_label
+            st.session_state.probs = probs
+            st.session_state.analyzing = False
+            st.rerun()
+
+    # --- C. 結果表示画面 (2カラムレイアウト・スクロールなし) ---
+    elif st.session_state.result is not None:
+        
+        # 左右に分割 (比率 1:1)
+        col1, col2 = st.columns([1, 1])
+        
+        # --- 左カラム: 結果とRESTARTボタン ---
+        with col1:
+            # 結果ボックス
+            color_map = {"POSITIVE": "#00FF00", "NEGATIVE": "#FF0000", "NEUTRAL": "#FFFF00"}
+            res_color = color_map.get(st.session_state.result, "#FFFFFF")
+            
+            st.markdown(f"""
+                <div class="result-box" style="border-color: {res_color};">
+                    <p class="result-label">DETECTED EMOTION</p>
+                    <p class="result-text" style="color: {res_color};">{st.session_state.result}</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # スペース調整
+            st.write("") 
+            
+            # RESTARTボタン
+            if st.button("RESTART SYSTEM"):
+                st.session_state.result = None
+                st.session_state.probs = None
+                st.rerun()
+
+        # --- 右カラム: 確率グラフ ---
+        with col2:
+            probs = st.session_state.probs
+            class_names = encoder.classes_ if hasattr(encoder, 'classes_') else ["NEG", "NEU", "POS"]
+            
+            # グラフ描画 (極小サイズ)
+            fig, ax = plt.subplots(figsize=(3, 2.5)) # サイズ調整
+            
+            # 背景透明
+            fig.patch.set_alpha(0)
+            ax.patch.set_alpha(0)
+            
+            # 棒グラフ
+            bars = ax.bar(class_names, probs, color='#00FF41', alpha=0.7)
+            
+            # 値が高いバーだけ色を変える
+            max_idx = np.argmax(probs)
+            bars[max_idx].set_color(res_color)
+            bars[max_idx].set_alpha(1.0)
+
+            # 文字色設定
+            ax.tick_params(axis='x', colors='white', labelsize=10)
+            ax.tick_params(axis='y', colors='white', labelsize=8)
+            ax.spines['bottom'].set_color('white')
+            ax.spines['left'].set_color('white')
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
+            ax.set_ylim(0, 1.0)
+            ax.set_title("Probability", color='gray', fontsize=10)
 
-            # Streamlitに渡す
-            chart_placeholder.pyplot(fig)
-
-            # メモリリーク防止（ループで回すなら必須）
+            st.pyplot(fig)
             plt.close(fig)
-            
-            predictions.append(predicted.item())
-            all_probs.append(prob)
-            time.sleep(0.1)
-            
-        final_idx = max(set(predictions), key=predictions.count)
-        final_emotion = encoder.inverse_transform([final_idx])[0]
-        final_probs = np.mean(all_probs, axis=0)
-        
-        st.session_state['result_emotion'] = final_emotion
-        st.session_state['probs'] = final_probs
-        st.rerun()
-    else:
-        st.info("System Ready. Press START.")
+
+if __name__ == "__main__":
+    main()
