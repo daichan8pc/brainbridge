@@ -41,9 +41,12 @@ sleep 20
 # 7. ブラウザを起動（キオスクモード）
 echo "Starting Chromium..."
 # --kiosk: 全画面
+# --window-position=0,0 : 左上隅(0,0)から表示開始
+# --window-size=480,320 : 画面サイズ(480x320)に強制
+# --start-fullscreen    : 念押しのフルスクリーン指定
 # --incognito: シークレットモード（キャッシュ対策）
 # --noerrdialogs: エラーダイアログを出さない
-chromium-browser --kiosk --incognito --noerrdialogs --disable-infobars http://localhost:8501
+chromium-browser --kiosk --start-fullscreen --window-position=0,0 --window-size=480,320 --incognito --noerrdialogs --disable-infobars http://localhost:8501
 
 # ブラウザが閉じられたら終了
 kill $APP_PID
