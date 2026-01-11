@@ -12,55 +12,92 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- 1. 画面設定 ---
+# --- 1. 画面設定（最速で実行） ---
 st.set_page_config(page_title="BrainBridge", layout="wide")
 
-# CSS設定
+# CSS設定（3.5インチ画面 & タッチパネル特化版）
 st.markdown("""
     <style>
+    /* 0. マウスカーソルを全域で抹消（最重要） */
+    * {
+        cursor: none !important;
+    }
+    
     /* 全体の背景色と文字色 */
     .stApp {
         background-color: #000000;
         color: #00FF41;
     }
     
-    /* 1. 上部のヘッダーバーを完全非表示にする */
+    /* 1. 上部のヘッダーバーを完全非表示 */
     header[data-testid="stHeader"] {
         display: none;
     }
     
-    /* 2. 上下の余白（パディング）を極限まで削る */
+    /* 2. 余白を極限まで削る */
     .block-container {
-        padding-top: 0rem !important;   /* 上の隙間をゼロに */
-        padding-bottom: 0rem !important; /* 下の隙間もゼロに */
-        padding-left: 1rem !important;   /* 左右は少し開けないと見切れる */
-        padding-right: 1rem !important;
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
+        padding-left: 0.5rem !important; /* 横幅確保のため少し減らす */
+        padding-right: 0.5rem !important;
         max-width: 100%;
     }
 
-    /* 3. フッター（Made with Streamlit）も消す */
+    /* 3. フッター削除 */
     footer {
         display: none;
     }
 
-    /* --- 以下、既存のデザイン設定 --- */
-    h1, h2, h3 { color: #FFFFFF; font-family: 'Courier New', monospace; margin-bottom: 0px; }
+    /* --- タッチUI最適化 --- */
+    h1, h2, h3 { 
+        color: #FFFFFF; 
+        font-family: 'Courier New', monospace; 
+        margin-bottom: 0px; 
+    }
     
     .result-box {
         border: 2px solid #FFFFFF; padding: 10px; text-align: center;
         border-radius: 10px; margin-top: 5px; margin-bottom: 5px;
     }
-    .result-text { font-size: 40px !important; font-weight: bold; color: white; }
-    
-    .stButton > button {
-        width: 100%; height: 60px; font-size: 20px !important;
-        background-color: #333333; color: white;
-        border: 1px solid #00FF41; border-radius: 5px;
-        margin-top: 5px;
+    .result-text { 
+        font-size: 40px !important; 
+        font-weight: bold; 
+        color: white; 
     }
-    .stButton > button:active { background-color: #00FF41; color: black; }
+    
+    /* ボタン: 指で押しやすいサイズに巨大化 */
+    .stButton > button {
+        width: 100%; 
+        height: 80px; /* 60px -> 80px に拡大 */
+        font-size: 24px !important; /* 文字も大きく */
+        font-weight: bold;
+        background-color: #333333; 
+        color: white;
+        border: 2px solid #00FF41; /* 枠線を太く */
+        border-radius: 10px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        
+        /* カーソル消失のダメ押し */
+        cursor: none !important;
+    }
+    
+    /* ボタンを押した時の反応（タッチフィードバック） */
+    .stButton > button:active { 
+        background-color: #00FF41; 
+        color: black; 
+        transform: scale(0.98); /* 押した感触を出すために少し縮む */
+    }
+    
+    /* フォーカス時の青い枠線を消す（重要） */
+    .stButton > button:focus {
+        outline: none !important;
+        box-shadow: none !important;
+        border-color: #00FF41 !important;
+        color: white !important;
+    }
     </style>
-    """,unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # --- 2. モデル読み込み関数 ---
 @st.cache_resource
